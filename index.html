@@ -1,0 +1,2293 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>3D - Neon qo'l bilan ishlaydi .</title>
+  
+  <!-- Google Fonts: Space Grotesk & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Three.js (Optimized 3D Engine) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- OrbitControls -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- MediaPipe Camera Utils & Hands (Ultra-fast lite neural net) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.4/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+
+  <style>
+/* ==========================================================================
+   AirPaint 3D — Zamonaviy Cyberpunk & Ultra-Tezkor Dizayn Uslubi
+   ========================================================================== */
+
+:root {
+  --bg-dark: #07090e;
+  --panel-bg: rgba(13, 17, 27, 0.75);
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --panel-blur: 16px;
+  
+  --primary-neon: #00f3ff;
+  --primary-glow: rgba(0, 243, 255, 0.45);
+  --secondary-neon: #ff0055;
+  --accent-yellow: #ffe600;
+  --accent-green: #00ff66;
+  
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  
+  --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  font-family: var(--font-body);
+  color: var(--text-main);
+  touch-action: none;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+#webcam {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#ar-camera-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  display: none;
+  filter: brightness(0.7) contrast(1.1);
+  transform: scaleX(-1);
+}
+
+.app-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  z-index: 20;
+  pointer-events: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.logo-orb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--primary-neon) 0%, #0066cc 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px var(--primary-glow);
+  position: relative;
+}
+
+.orb-core {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  animation: pulseCore 2s infinite ease-in-out;
+}
+
+@keyframes pulseCore {
+  0%, 100% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 8px #fff; }
+}
+
+.brand-text h1 {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+}
+
+.brand-text h1 span {
+  color: var(--primary-neon);
+  text-shadow: 0 0 10px var(--primary-glow);
+}
+
+.brand-text .subtitle {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.gesture-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+  padding: 8px 20px;
+  border-radius: 50px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 243, 255, 0.15);
+  transition: var(--transition);
+}
+
+.gesture-badge.drawing {
+  border-color: var(--primary-neon);
+  box-shadow: 0 0 25px var(--primary-glow);
+  transform: scale(1.05);
+}
+
+.gesture-badge.rotating {
+  border-color: #ffe600;
+  box-shadow: 0 0 25px rgba(255, 230, 0, 0.4);
+}
+
+.gesture-badge.colorshift {
+  border-color: #ff0055;
+  box-shadow: 0 0 25px rgba(255, 0, 85, 0.4);
+}
+
+.gesture-icon {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.gesture-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.gesture-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.gesture-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.fps-pill {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--panel-border);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-family: var(--font-heading);
+  color: var(--accent-green);
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.icon-btn:hover {
+  border-color: var(--primary-neon);
+  box-shadow: 0 0 12px var(--primary-glow);
+  transform: translateY(-2px);
+}
+
+.pip-camera {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  width: 170px;
+  height: 125px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+  border: 1.5px solid rgba(0, 243, 255, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 243, 255, 0.2);
+  z-index: 15;
+  transition: var(--transition);
+}
+
+.pip-camera.minimized {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.pip-camera.minimized canvas,
+.pip-camera.minimized .pip-tag,
+.pip-camera.minimized .pip-switch {
+  display: none;
+}
+
+.pip-camera canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.pip-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+}
+
+.pip-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--primary-neon);
+  background: rgba(0, 243, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.pip-toggle, .pip-switch {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.pip-toggle:hover, .pip-switch:hover {
+  background: var(--primary-neon);
+  color: #000;
+}
+
+.floating-toolbar {
+  position: absolute;
+  top: 90px;
+  right: 24px;
+  bottom: 24px;
+  width: 240px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  z-index: 15;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+}
+
+.floating-toolbar::-webkit-scrollbar {
+  width: 4px;
+}
+.floating-toolbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.toolbar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.color-palette {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.color-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background-color: var(--c);
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+}
+
+.color-dot.active {
+  transform: scale(1.15);
+  border-color: #fff;
+  box-shadow: 0 0 12px var(--c);
+}
+
+.rainbow-dot {
+  background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+  font-size: 0.7rem;
+}
+
+.neon-slider{
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
+  transition: var(--transition);
+}
+
+.neon-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-neon);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--primary-glow);
+  transition: transform 0.1s;
+}
+
+.neon-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.brush-modes, .bg-modes, .perf-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.mode-pill, .bg-pill, .perf-btn {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--panel-border);
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: var(--transition);
+  text-align: center;
+}
+
+.mode-pill.active, .bg-pill.active, .perf-btn.active {
+  background: rgba(0, 243, 255, 0.2);
+  border-color: var(--primary-neon);
+  color: var(--primary-neon);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.25);
+}
+
+.perf-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  background: rgba(0, 255, 102, 0.15);
+  color: var(--accent-green);
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.action-btn {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--panel-border);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.action-btn.highlight-btn {
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.25), rgba(0, 102, 255, 0.25));
+  border-color: var(--primary-neon);
+  color: #fff;
+}
+
+.action-btn.highlight-btn:hover {
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.action-btn.export-btn {
+  background: linear-gradient(135deg, rgba(255, 0, 85, 0.2), rgba(168, 85, 247, 0.2));
+  border-color: rgba(255, 0, 85, 0.5);
+}
+
+.toolbar-toggle-btn {
+  display: none;
+  position: absolute;
+  top: 80px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--panel-bg);
+  border: 1px solid var(--primary-neon);
+  color: #fff;
+  font-size: 1.2rem;
+  z-index: 25;
+  box-shadow: 0 0 15px var(--primary-glow);
+  cursor: pointer;
+}
+
+.air-pointer {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  display: none;
+  transition: width 0.15s, height 0.15s;
+}
+
+.pointer-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--primary-neon);
+  border-radius: 50%;
+  animation: rotateRing 3s linear infinite;
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+
+.pointer-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px #fff;
+}
+
+.pointer-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--primary-neon);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+@keyframes rotateRing {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.air-pointer.drawing .pointer-ring {
+  border-color: #ff0055;
+  box-shadow: 0 0 18px rgba(255, 0, 85, 0.7);
+  animation-duration: 1s;
+}
+
+.air-pointer.rotating .pointer-ring {
+  border-color: #ffe600;
+  box-shadow: 0 0 18px rgba(255, 230, 0, 0.7);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  background: #0d121d;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 243, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.92);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-backdrop.active .modal-card {
+  transform: scale(1);
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header h2 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: #fff;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.8rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+.modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gesture-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.gesture-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  transition: var(--transition);
+}
+
+.gesture-card:hover {
+  border-color: var(--primary-neon);
+  background: rgba(0, 243, 255, 0.05);
+}
+
+.gesture-card-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.gesture-card-info h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #fff;
+}
+
+.gesture-card-info p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.tip-box {
+  background: rgba(0, 243, 255, 0.08);
+  border: 1px dashed rgba(0, 243, 255, 0.4);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: #c7d2fe;
+  line-height: 1.4;
+}
+
+.tip-icon {
+  font-size: 1.3rem;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--panel-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.start-btn {
+  background: linear-gradient(135deg, var(--primary-neon), #0077ff);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 10px 24px;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px var(--primary-glow);
+  transition: var(--transition);
+}
+
+.start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px var(--primary-glow);
+}
+
+.loader-overlay {
+  position: fixed;
+  inset: 0;
+  background: #07090e;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  transition: opacity 0.5s ease;
+}
+
+.loader-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loader-spinner {
+  position: relative;
+  width: 70px;
+  height: 70px;
+}
+
+.spinner-ring {
+  width: 100%;
+  height: 100%;
+  border: 3px solid rgba(0, 243, 255, 0.15);
+  border-top-color: var(--primary-neon);
+  border-radius: 50%;
+  animation: spinRing 1s infinite linear;
+}
+
+.spinner-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.6rem;
+  animation: pulseCore 1.5s infinite;
+}
+
+@keyframes spinRing {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loader-overlay h2 {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.loader-overlay p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 90;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--panel-blur));
+  border: 1px solid var(--primary-neon);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 4px 25px var(--primary-glow);
+  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1), toastOut 0.3s forwards 2.7s;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  
+  .brand-text {
+    display: none;
+  }
+
+  .gesture-badge {
+    padding: 6px 14px;
+    gap: 8px;
+  }
+
+  .gesture-label {
+    font-size: 0.78rem;
+  }
+
+  .gesture-hint {
+    display: none;
+  }
+
+  .pip-camera {
+    bottom: 14px;
+    left: 14px;
+    width: 120px;
+    height: 90px;
+  }
+
+  .toolbar-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .floating-toolbar {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-height: 70vh;
+    border-radius: 24px 24px 0 0;
+    transform: translateY(105%);
+  }
+
+  .floating-toolbar.open {
+    transform: translateY(0);
+  }
+
+  .gesture-grid {
+    grid-template-columns: 1fr;
+  }
+}
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <video id="webcam" playsinline muted autoplay></video>
+  <canvas id="ar-camera-canvas"></canvas>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo-orb"><span class="orb-core"></span></div>
+      <div class="brand-text">
+        <h1>AirPaint <span>3D</span></h1>
+        <p class="subtitle">AI Qo'l Harakati Bilan Chizish</p>
+      </div>
+    </div>
+
+    <div class="gesture-badge" id="gesture-badge">
+      <div class="gesture-icon" id="gesture-icon">🖐️</div>
+      <div class="gesture-info">
+        <span class="gesture-label" id="gesture-label">Kameraga qarang</span>
+        <span class="gesture-hint" id="gesture-hint">Qo'lingizni ko'rsating</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="fps-pill" id="fps-counter" title="Kadrlar soni (FPS)">60 FPS</div>
+      <button class="icon-btn" id="sound-btn" title="Ovozni yoqish/o'chirish">
+        <span id="sound-icon">🔊</span>
+      </button>
+      <button class="icon-btn" id="help-btn" title="Imo-ishoralar qo'llanmasi">
+        <span>❓</span>
+      </button>
+      <button class="icon-btn" id="fullscreen-btn" title="To'liq ekran">
+        <span>⛶</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="pip-camera" id="pip-container">
+    <canvas id="pip-canvas"></canvas>
+    <div class="pip-overlay">
+      <span class="pip-tag">AI TRACKER</span>
+      <button class="pip-toggle" id="pip-toggle-btn" title="Kamerani yashirish/ko'rsatish">👁️</button>
+      <button class="pip-switch" id="camera-flip-btn" title="Kamerani almashtirish (Old/Orqa)">🔄</button>
+    </div>
+  </div>
+
+  <aside class="floating-toolbar" id="toolbar">
+    <div class="toolbar-section">
+      <div class="section-title">Rang</div>
+      <div class="color-palette" id="color-palette">
+        <button class="color-dot active" data-color="#00f3ff" style="--c: #00f3ff" title="Kiber Neon Moviy"></button>
+        <button class="color-dot" data-color="#ff0055" style="--c: #ff0055" title="Neon Qizil"></button>
+        <button class="color-dot" data-color="#00ff66" style="--c: #00ff66" title="Yashil Zumrad"></button>
+        <button class="color-dot" data-color="#ffe600" style="--c: #ffe600" title="Elektr Sariq"></button>
+        <button class="color-dot" data-color="#a855f7" style="--c: #a855f7" title="Binafsha"></button>
+        <button class="color-dot" data-color="#ff7b00" style="--c: #ff7b00" title="Olovli Olov"></button>
+        <button class="color-dot rainbow-dot" data-color="rainbow" title="Kamalak (Har bir chiziqda o'zgaradi)">🌈</button>
+      </div>
+    </div>
+
+    <div class="toolbar-section">
+      <div class="section-title flex-between">
+        <span>Qalinlik</span>
+        <span id="brush-size-val">1.0x</span>
+      </div>
+      <input type="range" id="brush-size" min="0.3" max="3.0" step="0.1" value="1.0" class="neon-slider">
+    </div>
+
+    <div class="toolbar-section">
+      <div class="section-title">Chizish Effekti</div>
+      <div class="brush-modes" id="brush-modes">
+        <button class="mode-pill active" data-mode="tube"><span class="pill-icon">✨</span> 3D Nur</button>
+        <button class="mode-pill" data-mode="ribbon"><span class="pill-icon">🎗️</span> Lenta</button>
+        <button class="mode-pill" data-mode="sparks"><span class="pill-icon">🎆</span> Uchqun</button>
+      </div>
+    </div>
+
+    <div class="toolbar-section">
+      <div class="section-title">Fon Ko'rinishi</div>
+      <div class="bg-modes" id="bg-modes">
+        <button class="bg-pill active" data-bg="galaxy">🌌 Galaktika</button>
+        <button class="bg-pill" data-bg="ar">📷 AR Xona</button>
+        <button class="bg-pill" data-bg="dark">🖤 Qora</button>
+      </div>
+    </div>
+
+    <div class="toolbar-section">
+      <div class="section-title flex-between">
+        <span>Tezlik Rejimi</span>
+        <span class="perf-badge" id="perf-badge-text">Ultra Tezkor</span>
+      </div>
+      <div class="perf-selector">
+        <button class="perf-btn active" data-perf="fast" title="Slaby telefon va noutbuklar uchun 60+ FPS">
+          🚀 Yengil (Slaby)
+        </button>
+        <button class="perf-btn" data-perf="balanced" title="Balanslashtirilgan">
+          ⚡ Standart
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-actions">
+      <button class="action-btn" id="btn-undo" title="Oxirgi chiziqni bekor qilish">
+        <span class="action-icon">↩️</span> Bekor qilish
+      </button>
+      <button class="action-btn" id="btn-clear" title="Barcha rasmni tozalash">
+        <span class="action-icon">🗑️</span> Tozalash
+      </button>
+      <button class="action-btn" id="btn-reset-cam" title="Kamerani 3D markazga qaytarish">
+        <span class="action-icon">🎯</span> Markaz
+      </button>
+      <button class="action-btn highlight-btn" id="btn-screenshot" title="Chizilgan rasmni PNG sifatida yuklab olish">
+        <span class="action-icon">📸</span> Rasm Saqlash
+      </button>
+      <button class="action-btn export-btn" id="btn-export-obj" title="3D model (.OBJ) qilib saqlash">
+        <span class="action-icon">💾</span> 3D OBJ Yuklash
+      </button>
+    </div>
+  </aside>
+
+  <button class="toolbar-toggle-btn" id="toolbar-toggle" title="Menyuni ochish">⚙️</button>
+
+  <div class="air-pointer" id="air-pointer">
+    <div class="pointer-ring"></div>
+    <div class="pointer-dot"></div>
+    <div class="pointer-label" id="pointer-label">Chizish</div>
+  </div>
+
+  <div class="modal-backdrop" id="help-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🎮 Qo'l Imo-Ishoralari Boshqaruvi</h2>
+        <button class="close-btn" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="gesture-grid">
+          <div class="gesture-card">
+            <div class="gesture-card-icon">👉</div>
+            <div class="gesture-card-info">
+              <h3>1 Barmoq (Ko'rsatkich)</h3>
+              <p><strong>3D Fazoda Chizish:</strong> Barmoq uchida 3D nurlar chiziladi. Qo'lni yaqinlashtirsangiz oldinga, uzoqlashtirsangiz chuqurlikka chizadi.</p>
+            </div>
+          </div>
+          <div class="gesture-card">
+            <div class="gesture-card-icon">✊</div>
+            <div class="gesture-card-info">
+              <h3>Musht (Barcha barmoq yumuq)</h3>
+              <p><strong>3D Rasmni 360° Aylantirish:</strong> Mushtingizni qayerga bursangiz, 3D chizilgan rasm o'sha tomonga aylanadi.</p>
+            </div>
+          </div>
+          <div class="gesture-card">
+            <div class="gesture-card-icon">✌️</div>
+            <div class="gesture-card-info">
+              <h3>2 Barmoq (V - Victory)</h3>
+              <p><strong>Rangni Almashtirish:</strong> 2 barmoqni ko'rsatganingizda neon ranglar avtomatik almashadi va akkord yangraydi.</p>
+            </div>
+          </div>
+          <div class="gesture-card">
+            <div class="gesture-card-icon">🖐️</div>
+            <div class="gesture-card-info">
+              <h3>Ochiq Kaft (5 Barmoq)</h3>
+              <p><strong>Kuzatuv / Tinch Holat:</strong> Chizish to'xtaydi, lazer kursor erkin harakatlanadi.</p>
+            </div>
+          </div>
+          <div class="gesture-card">
+            <div class="gesture-card-icon">👌</div>
+            <div class="gesture-card-info">
+              <h3>Chimchilash (Bosh + Ko'rsatkich)</h3>
+              <p><strong>Nozik Chizish / Chuqurlik:</strong> Chiziqni o'ta nozik va aniq boshqarish imkonini beradi.</p>
+            </div>
+          </div>
+          <div class="gesture-card">
+            <div class="gesture-card-icon">🤟</div>
+            <div class="gesture-card-info">
+              <h3>Rok Belgisi (1 va 4-barmoq)</h3>
+              <p><strong>Sehrli Yulduzlar:</strong> Barmoqlaringiz uchidan uchqunlar va yulduzlar otiladi!</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="tip-box">
+          <span class="tip-icon">💡</span>
+          <div>
+            <strong>Slaby telefon yoki kompyuterlar uchun:</strong>
+            Biz dasturni Google MediaPipe Lite neyrotarmog'i bilan jihozladik. U eng zaif qurilmalarda ham qotmasdan silliq 60 FPS tezlikda ishlaydi!
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="start-btn" id="modal-start-btn">Tushundim, Boshlash! 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loader-overlay" id="loader">
+    <div class="loader-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-core">⚡</div>
+    </div>
+    <h2 id="loader-status">AI Kamera Tizimi Ishga Tushmoqda...</h2>
+    <p>Iltimos, brauzerda kamera ruxsatini bering (Allow Camera).</p>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+/**
+ * ============================================================================
+ * AirPaint 3D — Ultra-Tezkor AI Qo'l Harakati Bilan 3D Chizish Tizimi
+ * ============================================================================
+ */
+
+class SoundFX {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+    this.drawOsc = null;
+    this.drawGain = null;
+  }
+
+  init() {
+    if (this.ctx) {
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      return;
+    }
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioCtx();
+    } catch (e) {
+      console.warn("AudioContext qo'llab-quvvatlanmadi:", e);
+    }
+  }
+
+  toggle() {
+    this.enabled = !this.enabled;
+    if (!this.enabled && this.drawGain && this.ctx) {
+      this.drawGain.gain.setValueAtTime(0, this.ctx.currentTime);
+    }
+    return this.enabled;
+  }
+
+  startDrawSound() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx || this.drawOsc) return;
+
+    try {
+      this.drawOsc = this.ctx.createOscillator();
+      this.drawGain = this.ctx.createGain();
+
+      this.drawOsc.type = 'sine';
+      this.drawOsc.frequency.setValueAtTime(260, this.ctx.currentTime);
+
+      this.drawGain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+      this.drawGain.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 0.05);
+
+      this.drawOsc.connect(this.drawGain);
+      this.drawGain.connect(this.ctx.destination);
+      this.drawOsc.start();
+    } catch (e) {}
+  }
+
+  updateDrawFreq(dist) {
+    if (!this.enabled || !this.drawOsc || !this.ctx) return;
+    try {
+      const freq = 200 + Math.min(Math.max(dist * 350, 0), 450);
+      this.drawOsc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.04);
+    } catch (e) {}
+  }
+
+  stopDrawSound() {
+    if (!this.drawOsc || !this.ctx) return;
+    try {
+      const g = this.drawGain;
+      const osc = this.drawOsc;
+      this.drawOsc = null;
+      this.drawGain = null;
+      g.gain.setValueAtTime(g.gain.value, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.06);
+      setTimeout(() => {
+        try { osc.stop(); osc.disconnect(); } catch (e) {}
+      }, 70);
+    } catch (e) {}
+  }
+
+  playColorChime() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    [523.25, 659.25, 783.99].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+      gain.gain.setValueAtTime(0.05, now + idx * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.22);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + idx * 0.04);
+      osc.stop(now + idx * 0.04 + 0.25);
+    });
+  }
+
+  playSparksSound() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(850 + Math.random() * 400, now);
+    osc.frequency.exponentialRampToValueAtTime(250, now + 0.14);
+    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  }
+
+  playClearSound() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(420, now);
+    osc.frequency.exponentialRampToValueAtTime(70, now + 0.22);
+    gain.gain.setValueAtTime(0.06, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.24);
+  }
+}
+
+const AppState = {
+  currentColor: '#00f3ff',
+  isRainbow: false,
+  brushSize: 1.0,
+  brushMode: 'tube',
+  bgMode: 'galaxy',
+  perfMode: 'fast',
+  
+  currentGesture: 'NONE',
+  lastColorShiftTime: 0,
+  
+  facingMode: 'user',
+  cameraRunning: false,
+  isProcessingFrame: false,
+  
+  fps: 60,
+  drawnStrokes: []
+};
+
+const soundFX = new SoundFX();
+
+class ThreeScene {
+  constructor(container) {
+    this.container = container;
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(55, this.width / this.height, 0.1, 1000);
+    this.camera.position.set(0, 0, 16);
+
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: false,
+      alpha: true,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: true
+    });
+    this.renderer.setSize(this.width, this.height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
+    this.container.appendChild(this.renderer.domElement);
+
+    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.08;
+    this.controls.maxDistance = 50;
+    this.controls.minDistance = 3;
+
+    this.drawGroup = new THREE.Group();
+    this.scene.add(this.drawGroup);
+
+    this.cursorMesh = this.createCursor();
+    this.scene.add(this.cursorMesh);
+
+    this.starfield = this.createStarfield();
+    this.scene.add(this.starfield);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+    this.scene.add(ambientLight);
+
+    this.sparksGroup = new THREE.Group();
+    this.scene.add(this.sparksGroup);
+    this.activeSparks = [];
+
+    window.addEventListener('resize', () => this.onResize());
+  }
+
+  createCursor() {
+    const group = new THREE.Group();
+    const sphereGeo = new THREE.SphereGeometry(0.18, 10, 10);
+    const sphereMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, wireframe: true });
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    group.add(sphere);
+
+    const ringGeo = new THREE.RingGeometry(0.28, 0.36, 16);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x00f3ff,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.7
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    group.add(ring);
+
+    group.sphere = sphere;
+    group.ring = ring;
+    group.visible = false;
+    return group;
+  }
+
+  createStarfield() {
+    const starsCount = 1000;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(starsCount * 3);
+    const colors = new Float32Array(starsCount * 3);
+
+    const c1 = new THREE.Color(0x00f3ff);
+    const c2 = new THREE.Color(0xa855f7);
+
+    for (let i = 0; i < starsCount; i++) {
+      const i3 = i * 3;
+      positions[i3] = (Math.random() - 0.5) * 80;
+      positions[i3 + 1] = (Math.random() - 0.5) * 80;
+      positions[i3 + 2] = (Math.random() - 0.5) * 80;
+
+      const mixed = c1.clone().lerp(c2, Math.random());
+      colors[i3] = mixed.r;
+      colors[i3 + 1] = mixed.g;
+      colors[i3 + 2] = mixed.b;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.42,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.65,
+      blending: THREE.AdditiveBlending
+    });
+
+    return new THREE.Points(geometry, material);
+  }
+
+  spawnSparks(position, colorHex) {
+    const count = 16;
+    const color = new THREE.Color(colorHex);
+    for (let i = 0; i < count; i++) {
+      const geo = new THREE.SphereGeometry(0.06, 6, 6);
+      const mat = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 1
+      });
+      const spark = new THREE.Mesh(geo, mat);
+      spark.position.copy(position);
+      spark.velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 0.35,
+        (Math.random() - 0.5) * 0.35,
+        (Math.random() - 0.5) * 0.35
+      );
+      spark.life = 1.0;
+      this.sparksGroup.add(spark);
+      this.activeSparks.push(spark);
+    }
+    soundFX.playSparksSound();
+  }
+
+  updateSparks(delta) {
+    for (let i = this.activeSparks.length - 1; i >= 0; i--) {
+      const spark = this.activeSparks[i];
+      spark.position.add(spark.velocity);
+      spark.life -= delta * 2.8;
+      spark.material.opacity = Math.max(0, spark.life);
+      spark.scale.multiplyScalar(0.95);
+
+      if (spark.life <= 0) {
+        this.sparksGroup.remove(spark);
+        spark.geometry.dispose();
+        spark.material.dispose();
+        this.activeSparks.splice(i, 1);
+      }
+    }
+  }
+
+  setCursorColor(colorHex) {
+    const col = new THREE.Color(colorHex);
+    if (this.cursorMesh.sphere) this.cursorMesh.sphere.material.color = col;
+    if (this.cursorMesh.ring) this.cursorMesh.ring.material.color = col;
+  }
+
+  onResize() {
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    this.camera.aspect = this.width / this.height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(this.width, this.height);
+  }
+
+  resetCamera() {
+    this.camera.position.set(0, 0, 16);
+    this.camera.lookAt(0, 0, 0);
+    this.drawGroup.rotation.set(0, 0, 0);
+    this.controls.reset();
+  }
+
+  render() {
+    if (this.starfield && AppState.bgMode === 'galaxy') {
+      this.starfield.rotation.y += 0.0003;
+      this.starfield.rotation.x += 0.00015;
+    }
+    if (this.cursorMesh.ring) {
+      this.cursorMesh.ring.rotation.z += 0.03;
+    }
+    this.controls.update();
+    this.renderer.render(this.scene, this.camera);
+  }
+}
+
+class StrokeBuilder {
+  constructor(threeScene) {
+    this.threeScene = threeScene;
+    this.currentPoints = [];
+    this.currentMesh = null;
+    this.isDrawing = false;
+    this.lastWorldPos = new THREE.Vector3();
+    this.minDistance = 0.12;
+    this.rainbowHue = 0;
+  }
+
+  startStroke(pos3D) {
+    this.isDrawing = true;
+    this.currentPoints = [pos3D.clone()];
+    this.lastWorldPos.copy(pos3D);
+    this.currentMesh = null;
+    soundFX.startDrawSound();
+  }
+
+  addPoint(pos3D) {
+    if (!this.isDrawing) return;
+
+    const dist = this.lastWorldPos.distanceTo(pos3D);
+    if (dist < this.minDistance) return;
+
+    this.currentPoints.push(pos3D.clone());
+    this.lastWorldPos.copy(pos3D);
+
+    soundFX.updateDrawFreq(dist);
+
+    if (AppState.brushMode === 'sparks') {
+      const col = AppState.isRainbow ? this.getRainbowHex() : AppState.currentColor;
+      this.threeScene.spawnSparks(pos3D, col);
+    }
+
+    if (this.currentPoints.length >= 2) {
+      this.updateMesh();
+    }
+  }
+
+  getRainbowHex() {
+    this.rainbowHue = (this.rainbowHue + 0.02) % 1;
+    const c = new THREE.Color();
+    c.setHSL(this.rainbowHue, 1, 0.55);
+    return '#' + c.getHexString();
+  }
+
+  updateMesh() {
+    if (this.currentPoints.length < 2) return;
+
+    if (this.currentMesh) {
+      this.threeScene.drawGroup.remove(this.currentMesh);
+      if (this.currentMesh.geometry) this.currentMesh.geometry.dispose();
+    }
+
+    const radius = 0.08 * AppState.brushSize;
+    const colorHex = AppState.isRainbow ? this.getRainbowHex() : AppState.currentColor;
+
+    if (AppState.brushMode === 'tube' || AppState.brushMode === 'sparks') {
+      const curve = new THREE.CatmullRomCurve3(this.currentPoints);
+      const tubularSegments = Math.min(this.currentPoints.length * 4, 100);
+      const radialSegments = 6;
+
+      const geometry = new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, false);
+      const material = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(colorHex)
+      });
+
+      this.currentMesh = new THREE.Mesh(geometry, material);
+      this.currentMesh.colorHex = colorHex;
+      this.currentMesh.curvePoints = [...this.currentPoints];
+    } else {
+      const geometry = new THREE.BufferGeometry();
+      const count = this.currentPoints.length;
+      const positions = new Float32Array(count * 6);
+
+      for (let i = 0; i < count; i++) {
+        const p = this.currentPoints[i];
+        const i6 = i * 6;
+        positions[i6] = p.x;
+        positions[i6 + 1] = p.y + radius;
+        positions[i6 + 2] = p.z;
+
+        positions[i6 + 3] = p.x;
+        positions[i6 + 4] = p.y - radius;
+        positions[i6 + 5] = p.z;
+      }
+
+      const indices = [];
+      for (let i = 0; i < count - 1; i++) {
+        const a = i * 2;
+        const b = i * 2 + 1;
+        const c = (i + 1) * 2;
+        const d = (i + 1) * 2 + 1;
+        indices.push(a, b, c);
+        indices.push(b, d, c);
+      }
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+
+      const material = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(colorHex),
+        side: THREE.DoubleSide
+      });
+
+      this.currentMesh = new THREE.Mesh(geometry, material);
+      this.currentMesh.colorHex = colorHex;
+      this.currentMesh.curvePoints = [...this.currentPoints];
+    }
+
+    this.threeScene.drawGroup.add(this.currentMesh);
+  }
+
+  endStroke() {
+    if (!this.isDrawing) return;
+    this.isDrawing = false;
+    soundFX.stopDrawSound();
+
+    if (this.currentMesh) {
+      AppState.drawnStrokes.push(this.currentMesh);
+      this.currentMesh = null;
+    }
+    this.currentPoints = [];
+  }
+
+  undo() {
+    if (AppState.drawnStrokes.length === 0) return;
+    const lastStroke = AppState.drawnStrokes.pop();
+    this.threeScene.drawGroup.remove(lastStroke);
+    if (lastStroke.geometry) lastStroke.geometry.dispose();
+    if (lastStroke.material) lastStroke.material.dispose();
+    soundFX.playClearSound();
+  }
+
+  clearAll() {
+    while (AppState.drawnStrokes.length > 0) {
+      const stroke = AppState.drawnStrokes.pop();
+      this.threeScene.drawGroup.remove(stroke);
+      if (stroke.geometry) stroke.geometry.dispose();
+      if (stroke.material) stroke.material.dispose();
+    }
+    soundFX.playClearSound();
+  }
+}
+
+class HandGestureEngine {
+  constructor(threeScene, strokeBuilder) {
+    this.threeScene = threeScene;
+    this.strokeBuilder = strokeBuilder;
+    
+    this.smoothedPos = new THREE.Vector3();
+    this.prevWristPos = null;
+    this.lerpFactor = 0.45;
+
+    this.badge = document.getElementById('gesture-badge');
+    this.iconEl = document.getElementById('gesture-icon');
+    this.labelEl = document.getElementById('gesture-label');
+    this.hintEl = document.getElementById('gesture-hint');
+    this.airPointer = document.getElementById('air-pointer');
+    this.pointerLabel = document.getElementById('pointer-label');
+
+    this.pipCanvas = document.getElementById('pip-canvas');
+    this.pipCtx = this.pipCanvas.getContext('2d');
+    this.arCanvas = document.getElementById('ar-camera-canvas');
+    this.arCtx = this.arCanvas.getContext('2d');
+  }
+
+  isFingerExtended(landmarks, tipIdx, pipIdx) {
+    const wrist = landmarks[0];
+    const tip = landmarks[tipIdx];
+    const pip = landmarks[pipIdx];
+    const dTip = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
+    const dPip = Math.hypot(pip.x - wrist.x, pip.y - wrist.y);
+    return dTip > dPip * 1.15;
+  }
+
+  distance(p1, p2) {
+    return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+  }
+
+  mapTo3D(landmark, handScale) {
+    const normX = (1.0 - landmark.x) * 2 - 1;
+    const normY = -(landmark.y * 2 - 1);
+    const baseZ = (handScale - 0.22) * 22;
+    return new THREE.Vector3(normX * 8.5, normY * 5.8, baseZ);
+  }
+
+  processLandmarks(landmarks, videoElement) {
+    this.drawPreview(landmarks, videoElement);
+
+    if (!landmarks || landmarks.length === 0) {
+      this.onHandLost();
+      return;
+    }
+
+    const indexUp = this.isFingerExtended(landmarks, 8, 6);
+    const middleUp = this.isFingerExtended(landmarks, 12, 10);
+    const ringUp = this.isFingerExtended(landmarks, 16, 14);
+    const pinkyUp = this.isFingerExtended(landmarks, 20, 18);
+
+    const pinchDist = this.distance(landmarks[4], landmarks[8]);
+    const isPinching = pinchDist < 0.065;
+    const handScale = this.distance(landmarks[0], landmarks[9]);
+
+    const target3D = this.mapTo3D(landmarks[8], handScale);
+    this.smoothedPos.lerp(target3D, this.lerpFactor);
+
+    this.update3DCursor(this.smoothedPos);
+    this.update2DPointer(landmarks[8]);
+
+    // 1) Musht
+    if (!indexUp && !middleUp && !ringUp && !pinkyUp) {
+      this.handleFistRotate(landmarks[0]);
+      return;
+    }
+    this.prevWristPos = null;
+
+    // 2) 2 Barmoq (V)
+    if (indexUp && middleUp && !ringUp && !pinkyUp) {
+      this.handleColorShift();
+      return;
+    }
+
+    // 3) Rok
+    if (indexUp && pinkyUp && !middleUp && !ringUp) {
+      this.handleRockSparks(this.smoothedPos);
+      return;
+    }
+
+    // 4) 3D Chizish
+    if ((indexUp && !middleUp && !ringUp && !pinkyUp) || isPinching) {
+      this.handleDrawing(this.smoothedPos, isPinching);
+      return;
+    }
+
+    // 5) Ochiq kaft
+    if (indexUp && middleUp && ringUp && pinkyUp) {
+      this.handleIdle();
+      return;
+    }
+
+    this.handleIdle();
+  }
+
+  handleDrawing(pos3D, isPinching) {
+    if (AppState.currentGesture !== 'DRAW') {
+      AppState.currentGesture = 'DRAW';
+      this.updateBadge('👉', '3D Chizilmoqda...', isPinching ? 'Nozik chimchilash rejimi' : 'Barmoq uchida 3D nur chizilmoqda', 'drawing');
+      this.strokeBuilder.startStroke(pos3D);
+      this.airPointer.className = 'air-pointer drawing';
+      this.pointerLabel.textContent = isPinching ? 'Nozik Chizish' : 'Chizilmoqda';
+    }
+    this.strokeBuilder.addPoint(pos3D);
+  }
+
+  handleFistRotate(wristLandmark) {
+    this.strokeBuilder.endStroke();
+
+    if (AppState.currentGesture !== 'ROTATE') {
+      AppState.currentGesture = 'ROTATE';
+      this.updateBadge('✊', '3D Aylantirilmoqda', 'Mushtingiz bilan rasmni 360° aylantiring', 'rotating');
+      this.airPointer.className = 'air-pointer rotating';
+      this.pointerLabel.textContent = '3D Aylantirish';
+    }
+
+    if (this.prevWristPos) {
+      const deltaX = (wristLandmark.x - this.prevWristPos.x) * 4.5;
+      const deltaY = (wristLandmark.y - this.prevWristPos.y) * 4.5;
+      this.threeScene.drawGroup.rotation.y -= deltaX;
+      this.threeScene.drawGroup.rotation.x += deltaY;
+    }
+
+    this.prevWristPos = { x: wristLandmark.x, y: wristLandmark.y };
+  }
+
+  handleColorShift() {
+    this.strokeBuilder.endStroke();
+    this.prevWristPos = null;
+
+    const now = Date.now();
+    if (now - AppState.lastColorShiftTime > 800) {
+      AppState.lastColorShiftTime = now;
+      this.cycleNextColor();
+      soundFX.playColorChime();
+    }
+
+    AppState.currentGesture = 'COLOR_SHIFT';
+    this.updateBadge('✌️', 'Rang Almashtirildi!', 'Keyingi neon rangga o\'tildi', 'colorshift');
+    this.airPointer.className = 'air-pointer';
+    this.pointerLabel.textContent = 'Rang O\'zgardi';
+  }
+
+  handleRockSparks(pos3D) {
+    this.strokeBuilder.endStroke();
+    this.prevWristPos = null;
+
+    AppState.currentGesture = 'SPARKS';
+    this.updateBadge('🤟', 'Sehrli Yulduzlar!', 'Fazoda neon uchqunlar portlamoqda', 'drawing');
+    this.threeScene.spawnSparks(pos3D, AppState.currentColor);
+    this.airPointer.className = 'air-pointer drawing';
+    this.pointerLabel.textContent = 'Uchqunlar';
+  }
+
+  handleIdle() {
+    this.strokeBuilder.endStroke();
+    this.prevWristPos = null;
+
+    if (AppState.currentGesture !== 'IDLE') {
+      AppState.currentGesture = 'IDLE';
+      this.updateBadge('🖐️', 'Kuzatuv Rejimi', 'Chizish uchun 1 barmoqni ko\'rsating (👉)', '');
+      this.airPointer.className = 'air-pointer';
+      this.pointerLabel.textContent = 'Kursor';
+    }
+  }
+
+  onHandLost() {
+    this.strokeBuilder.endStroke();
+    this.prevWristPos = null;
+    this.threeScene.cursorMesh.visible = false;
+    this.airPointer.style.display = 'none';
+
+    if (AppState.currentGesture !== 'NONE') {
+      AppState.currentGesture = 'NONE';
+      this.updateBadge('🔍', 'Qo\'l Qidirilmoqda...', 'Qo\'lingizni kameraga ko\'rsating', '');
+    }
+  }
+
+  updateBadge(icon, label, hint, extraClass) {
+    this.iconEl.textContent = icon;
+    this.labelEl.textContent = label;
+    this.hintEl.textContent = hint;
+    this.badge.className = `gesture-badge ${extraClass}`;
+  }
+
+  update3DCursor(pos3D) {
+    this.threeScene.cursorMesh.visible = true;
+    this.threeScene.cursorMesh.position.copy(pos3D);
+    this.threeScene.setCursorColor(AppState.currentColor);
+  }
+
+  update2DPointer(indexTip) {
+    this.airPointer.style.display = 'block';
+    const screenX = (1.0 - indexTip.x) * window.innerWidth;
+    const screenY = indexTip.y * window.innerHeight;
+    this.airPointer.style.left = `${screenX}px`;
+    this.airPointer.style.top = `${screenY}px`;
+  }
+
+  cycleNextColor() {
+    const dots = Array.from(document.querySelectorAll('.color-dot'));
+    let activeIdx = dots.findIndex(d => d.classList.contains('active'));
+    activeIdx = (activeIdx + 1) % dots.length;
+    dots[activeIdx].click();
+  }
+
+  drawPreview(landmarks, video) {
+    if (AppState.bgMode === 'ar' && video && video.readyState >= 2) {
+      if (this.arCanvas.width !== video.videoWidth) {
+        this.arCanvas.width = video.videoWidth;
+        this.arCanvas.height = video.videoHeight;
+      }
+      this.arCtx.drawImage(video, 0, 0, this.arCanvas.width, this.arCanvas.height);
+    }
+
+    if (!video || video.readyState < 2) return;
+    const cw = this.pipCanvas.width = 170;
+    const ch = this.pipCanvas.height = 125;
+
+    this.pipCtx.clearRect(0, 0, cw, ch);
+    this.pipCtx.drawImage(video, 0, 0, cw, ch);
+
+    if (landmarks && landmarks.length > 0) {
+      this.pipCtx.fillStyle = '#00f3ff';
+      for (let i = 0; i < landmarks.length; i++) {
+        const x = landmarks[i].x * cw;
+        const y = landmarks[i].y * ch;
+        this.pipCtx.beginPath();
+        this.pipCtx.arc(x, y, 2.2, 0, Math.PI * 2);
+        this.pipCtx.fill();
+      }
+
+      const tip = landmarks[8];
+      this.pipCtx.fillStyle = '#ff0055';
+      this.pipCtx.beginPath();
+      this.pipCtx.arc(tip.x * cw, tip.y * ch, 4.5, 0, Math.PI * 2);
+      this.pipCtx.fill();
+    }
+  }
+}
+
+class VisionPipeline {
+  constructor(gestureEngine) {
+    this.gestureEngine = gestureEngine;
+    this.video = document.getElementById('webcam');
+    this.loader = document.getElementById('loader');
+    this.loaderStatus = document.getElementById('loader-status');
+    this.hands = null;
+    this.stream = null;
+    this.animFrameId = null;
+
+    this.fpsEl = document.getElementById('fps-counter');
+    this.frameCount = 0;
+    this.lastFpsUpdate = performance.now();
+  }
+
+  async init() {
+    this.loaderStatus.textContent = "AI Neyrotarmog'i yuklanmoqda...";
+
+    try {
+      if (typeof Hands === 'undefined') {
+        throw new Error("MediaPipe Hands kutubxonasi yuklanmadi");
+      }
+
+      this.hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+      });
+
+      this.hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 0,
+        minDetectionConfidence: 0.55,
+        minTrackingConfidence: 0.55
+      });
+
+      this.hands.onResults((results) => {
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          this.gestureEngine.processLandmarks(results.multiHandLandmarks[0], this.video);
+        } else {
+          this.gestureEngine.processLandmarks(null, this.video);
+        }
+      });
+
+      this.loaderStatus.textContent = "Kameraga ulanmoqda...";
+      await this.startCamera();
+
+    } catch (err) {
+      console.error("Vision Pipeline Xatosi:", err);
+      this.loaderStatus.textContent = "Kamera ruxsati berilmadi yoki xato yuz berdi.";
+      showToast("ℹ️ Kameradan tashqari, sichqoncha yoki sensorli ekran bilan ham chizishingiz mumkin!");
+      setTimeout(() => {
+        this.loader.classList.add('hidden');
+      }, 1500);
+    }
+  }
+
+  async startCamera() {
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+
+    const isFast = AppState.perfMode === 'fast';
+    const constraints = {
+      audio: false,
+      video: {
+        facingMode: { ideal: AppState.facingMode },
+        width: { ideal: isFast ? 480 : 640 },
+        height: { ideal: isFast ? 360 : 480 }
+      }
+    };
+
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+      this.video.srcObject = this.stream;
+      await this.video.play();
+
+      AppState.cameraRunning = true;
+      this.startProcessingLoop();
+
+      setTimeout(() => {
+        this.loader.classList.add('hidden');
+        showToast("⚡ AI Tizimi Tayyor! Qo'lingiz bilan havoda chizing.");
+      }, 500);
+
+    } catch (e) {
+      console.warn("Kamerani ochib bo'lmadi:", e);
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        this.video.srcObject = this.stream;
+        await this.video.play();
+        AppState.cameraRunning = true;
+        this.startProcessingLoop();
+        this.loader.classList.add('hidden');
+      } catch (err2) {
+        throw err2;
+      }
+    }
+  }
+
+  startProcessingLoop() {
+    const process = async () => {
+      if (!AppState.cameraRunning) return;
+
+      if (!AppState.isProcessingFrame && this.video.readyState >= 2) {
+        AppState.isProcessingFrame = true;
+        try {
+          await this.hands.send({ image: this.video });
+        } catch (e) {
+        } finally {
+          AppState.isProcessingFrame = false;
+        }
+        this.calcFPS();
+      }
+
+      this.animFrameId = requestAnimationFrame(process);
+    };
+
+    this.animFrameId = requestAnimationFrame(process);
+  }
+
+  calcFPS() {
+    this.frameCount++;
+    const now = performance.now();
+    if (now - this.lastFpsUpdate >= 1000) {
+      AppState.fps = this.frameCount;
+      this.fpsEl.textContent = `${AppState.fps} FPS`;
+      this.fpsEl.style.color = AppState.fps >= 45 ? '#00ff66' : (AppState.fps >= 25 ? '#ffe600' : '#ff0055');
+      this.frameCount = 0;
+      this.lastFpsUpdate = now;
+    }
+  }
+
+  async flipCamera() {
+    AppState.facingMode = AppState.facingMode === 'user' ? 'environment' : 'user';
+    showToast(`🔄 Kamera: ${AppState.facingMode === 'user' ? 'Oldi (Selfie)' : 'Orqa'}`);
+    await this.startCamera();
+  }
+}
+
+class Exporter {
+  static saveScreenshot(threeScene) {
+    try {
+      const dataUrl = threeScene.renderer.domElement.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `AirPaint-3D-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+      showToast("📸 Rasm muvaffaqiyatli saqlandi!");
+    } catch (e) {
+      console.error("Screenshot saqlashda xato:", e);
+      showToast("❌ Rasmni saqlab bo'lmadi.");
+    }
+  }
+
+  static exportOBJ() {
+    if (AppState.drawnStrokes.length === 0) {
+      showToast("ℹ️ Hali hech narsa chizilmadi!");
+      return;
+    }
+
+    try {
+      let objContent = "# AirPaint 3D Exported Model\n# Created with AI Hand Tracking\n\n";
+      let vertexOffset = 1;
+
+      AppState.drawnStrokes.forEach((stroke, strokeIdx) => {
+        objContent += `o Stroke_${strokeIdx + 1}\n`;
+        const geom = stroke.geometry;
+        const posAttr = geom.getAttribute('position');
+
+        if (!posAttr) return;
+
+        for (let i = 0; i < posAttr.count; i++) {
+          const x = posAttr.getX(i);
+          const y = posAttr.getY(i);
+          const z = posAttr.getZ(i);
+          objContent += `v ${x.toFixed(4)} ${y.toFixed(4)} ${z.toFixed(4)}\n`;
+        }
+
+        if (geom.index) {
+          const indexAttr = geom.index;
+          for (let i = 0; i < indexAttr.count; i += 3) {
+            const a = indexAttr.getX(i) + vertexOffset;
+            const b = indexAttr.getX(i + 1) + vertexOffset;
+            const c = indexAttr.getX(i + 2) + vertexOffset;
+            objContent += `f ${a} ${b} ${c}\n`;
+          }
+        }
+
+        vertexOffset += posAttr.count;
+      });
+
+      const blob = new Blob([objContent], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.download = `AirPaint-Model-${Date.now()}.obj`;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      showToast("💾 3D OBJ model yuklab olindi!");
+    } catch (e) {
+      console.error("OBJ eksport qilishda xato:", e);
+      showToast("❌ 3D modelni eksport qilib bo'lmadi.");
+    }
+  }
+}
+
+function showToast(message) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    if (toast.parentNode) toast.parentNode.removeChild(toast);
+  }, 3000);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const canvasContainer = document.getElementById('canvas-container');
+  const threeScene = new ThreeScene(canvasContainer);
+  const strokeBuilder = new StrokeBuilder(threeScene);
+  const gestureEngine = new HandGestureEngine(threeScene, strokeBuilder);
+  const visionPipeline = new VisionPipeline(gestureEngine);
+
+  window.addEventListener('pointerdown', () => soundFX.init(), { once: true });
+
+  visionPipeline.init();
+
+  let lastTime = performance.now();
+  function animate() {
+    requestAnimationFrame(animate);
+    const now = performance.now();
+    const delta = (now - lastTime) / 1000;
+    lastTime = now;
+
+    threeScene.updateSparks(delta);
+    threeScene.render();
+  }
+  animate();
+
+  let isPointerDrawing = false;
+  const raycaster = new THREE.Raycaster();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+
+  function getMouseWorldPos(e) {
+    const x = (e.clientX / window.innerWidth) * 2 - 1;
+    const y = -(e.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera({ x, y }, threeScene.camera);
+    const target = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, target);
+    return target;
+  }
+
+  window.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.floating-toolbar, .app-header, .pip-camera, .modal-backdrop, .toolbar-toggle-btn')) return;
+    if (e.button === 0 && AppState.currentGesture === 'NONE') {
+      isPointerDrawing = true;
+      const pos = getMouseWorldPos(e);
+      strokeBuilder.startStroke(pos);
+      threeScene.setCursorColor(AppState.currentColor);
+      threeScene.cursorMesh.visible = true;
+      threeScene.cursorMesh.position.copy(pos);
+    }
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (isPointerDrawing && AppState.currentGesture === 'NONE') {
+      const pos = getMouseWorldPos(e);
+      strokeBuilder.addPoint(pos);
+      threeScene.cursorMesh.position.copy(pos);
+    }
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (isPointerDrawing) {
+      isPointerDrawing = false;
+      strokeBuilder.endStroke();
+    }
+  });
+
+  const colorDots = document.querySelectorAll('.color-dot');
+  colorDots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      colorDots.forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+
+      const col = dot.getAttribute('data-color');
+      if (col === 'rainbow') {
+        AppState.isRainbow = true;
+        showToast("🌈 Kamalak rangi yoqildi!");
+      } else {
+        AppState.isRainbow = false;
+        AppState.currentColor = col;
+        showToast(`🎨 Rang: ${dot.getAttribute('title')}`);
+      }
+      threeScene.setCursorColor(AppState.currentColor);
+      soundFX.playColorChime();
+    });
+  });
+
+  const brushSlider = document.getElementById('brush-size');
+  const brushVal = document.getElementById('brush-size-val');
+  brushSlider.addEventListener('input', (e) => {
+    AppState.brushSize = parseFloat(e.target.value);
+    brushVal.textContent = `${AppState.brushSize.toFixed(1)}x`;
+  });
+
+  const modePills = document.querySelectorAll('.mode-pill');
+  modePills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      modePills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      AppState.brushMode = pill.getAttribute('data-mode');
+      showToast(`✨ Chizish effekti: ${pill.textContent.trim()}`);
+    });
+  });
+
+  const bgPills = document.querySelectorAll('.bg-pill');
+  const arCanvas = document.getElementById('ar-camera-canvas');
+  bgPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      bgPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const bg = pill.getAttribute('data-bg');
+      AppState.bgMode = bg;
+
+      if (bg === 'galaxy') {
+        threeScene.starfield.visible = true;
+        arCanvas.style.display = 'none';
+        document.body.style.backgroundColor = '#07090e';
+      } else if (bg === 'ar') {
+        threeScene.starfield.visible = false;
+        arCanvas.style.display = 'block';
+      } else if (bg === 'dark') {
+        threeScene.starfield.visible = false;
+        arCanvas.style.display = 'none';
+        document.body.style.backgroundColor = '#000000';
+      }
+      showToast(`🌌 Fon: ${pill.textContent.trim()}`);
+    });
+  });
+
+  const perfBtns = document.querySelectorAll('.perf-btn');
+  const perfBadgeText = document.getElementById('perf-badge-text');
+  perfBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      perfBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const perf = btn.getAttribute('data-perf');
+      AppState.perfMode = perf;
+
+      if (perf === 'fast') {
+        perfBadgeText.textContent = "Ultra Tezkor";
+        perfBadgeText.style.color = "#00ff66";
+        threeScene.renderer.setPixelRatio(1.0);
+        showToast("🚀 Slaby rejim: 60 FPS unumdorlik!");
+      } else {
+        perfBadgeText.textContent = "Standart";
+        perfBadgeText.style.color = "#00f3ff";
+        threeScene.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.4));
+        showToast("⚡ Standart sifat yoqildi.");
+      }
+    });
+  });
+
+  document.getElementById('btn-undo').addEventListener('click', () => {
+    strokeBuilder.undo();
+    showToast("↩️ Oxirgi chiziq bekor qilindi.");
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    strokeBuilder.clearAll();
+    showToast("🗑️ Butun sahna tozalandi.");
+  });
+
+  document.getElementById('btn-reset-cam').addEventListener('click', () => {
+    threeScene.resetCamera();
+    showToast("🎯 Kamera markazga qaytarildi.");
+  });
+
+  document.getElementById('btn-screenshot').addEventListener('click', () => {
+    Exporter.saveScreenshot(threeScene);
+  });
+
+  document.getElementById('btn-export-obj').addEventListener('click', () => {
+    Exporter.exportOBJ();
+  });
+
+  const pipContainer = document.getElementById('pip-container');
+  document.getElementById('pip-toggle-btn').addEventListener('click', () => {
+    pipContainer.classList.toggle('minimized');
+  });
+
+  document.getElementById('camera-flip-btn').addEventListener('click', () => {
+    visionPipeline.flipCamera();
+  });
+
+  const soundBtn = document.getElementById('sound-btn');
+  const soundIcon = document.getElementById('sound-icon');
+  soundBtn.addEventListener('click', () => {
+    const isEnabled = soundFX.toggle();
+    soundIcon.textContent = isEnabled ? '🔊' : '🔇';
+    showToast(isEnabled ? "🔊 Ovoz yoqildi" : "🔇 Ovoz o'chirildi");
+  });
+
+  const helpModal = document.getElementById('help-modal');
+  document.getElementById('help-btn').addEventListener('click', () => {
+    helpModal.classList.add('active');
+  });
+  document.getElementById('modal-close').addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  document.getElementById('modal-start-btn').addEventListener('click', () => {
+    helpModal.classList.remove('active');
+  });
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) helpModal.classList.remove('active');
+  });
+
+  document.getElementById('fullscreen-btn').addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+
+  const toolbar = document.getElementById('toolbar');
+  const toolbarToggle = document.getElementById('toolbar-toggle');
+  toolbarToggle.addEventListener('click', () => {
+    toolbar.classList.toggle('open');
+  });
+});
+  </script>
+</body>
+</html>
